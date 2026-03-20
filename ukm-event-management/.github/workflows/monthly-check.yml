@@ -1,0 +1,45 @@
+name: Monthly UKM Page Check
+
+on:
+  schedule:
+    # Runs at 09:00 MYT (01:00 UTC) on the 1st of every month
+    - cron: '0 1 1 * *'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: write
+
+jobs:
+  check-and-update:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r scripts/requirements.txt
+
+      - name: Configure git
+        run: |
+          git config user.name "UKM Event Bot"
+          git config user.email "ukm-event-bot@users.noreply.github.com"
+
+      - name: Run auto-update
+        env:
+          UKM_EWARGA_USER: ${{ secrets.UKM_EWARGA_USER }}
+          UKM_EWARGA_PASS: ${{ secrets.UKM_EWARGA_PASS }}
+        run: python scripts/auto-update.py
+
+      - name: Upload scraper output as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scraper-output-${{ github.run_number }}
+          path: scripts/output/
+          retention-days: 30
